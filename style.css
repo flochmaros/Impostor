@@ -1,0 +1,364 @@
+/* Layout: jedna obrazovka naraz, stĺpec max 480 px, polnočné pozadie s rebrovaným sklom
+   a lúčom svetla (modrá hore, melónovo oranžová zdola). Oranžová = jediný akcent. */
+:root {
+  --ink: #02070A;          /* Midnight Black: pozadie */
+  --panel: #07131C;        /* plochy kariet */
+  --line: rgba(196, 226, 247, .12);
+  --line-strong: rgba(196, 226, 247, .24);
+  --text: #EDF4F9;
+  --muted: #8EA3B4;
+  --blue: #0297DE;         /* Electric Blue: len žiara v pozadí */
+  --orange: #FC734D;       /* Cantaloupe Orange: akcent */
+  --orange-soft: rgba(252, 115, 77, .16);
+
+  --f-display: 'Instrument Serif', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --f-body: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --r: 22px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font: 400 16px/1.5 var(--f-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- Pozadie: lúč svetla cez rebrované sklo ---------- */
+.glow { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.glow__beam {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(60% 38% at 50% 104%, rgba(255, 214, 190, .55) 0%, rgba(252, 115, 77, .55) 22%, rgba(252, 115, 77, 0) 62%),
+    radial-gradient(90% 60% at 50% 100%, rgba(2, 151, 222, .55) 0%, rgba(2, 151, 222, .18) 45%, rgba(2, 151, 222, 0) 75%),
+    radial-gradient(70% 40% at 50% -6%, rgba(2, 151, 222, .22) 0%, rgba(2, 151, 222, 0) 70%);
+  transition: opacity .6s ease, transform 1.2s var(--ease);
+  transform-origin: 50% 100%;
+  animation: breathe 7s ease-in-out infinite alternate;
+}
+@keyframes breathe { from { transform: scale(1); } to { transform: scale(1.08, 1.12); } }
+.glow__ribs {
+  position: absolute; inset: 0 -14px 0 0;
+  animation: drift 9s linear infinite;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, rgba(255,255,255,0) 1px 3px, rgba(0,0,0,.18) 3px 4px, rgba(255,255,255,0) 4px 7px);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%);
+  mask-image: linear-gradient(to top, #000 0%, rgba(0,0,0,.55) 45%, transparent 85%);
+}
+/* Počas tajných obrazoviek je žiara stlmená, nech nič neodvádza pozornosť. */
+body[data-mode="quiet"] .glow__beam { opacity: .35; }
+@keyframes drift { to { transform: translateX(-7px); } }
+body[data-mode="reveal"] .glow__beam { animation: none; transform: scale(1.18, 1.35); }
+body[data-mode="alarm"] .glow__beam { opacity: 1; filter: hue-rotate(-12deg) saturate(1.3); }
+
+/* ---------- Aplikácia a obrazovky ---------- */
+.app {
+  position: relative; z-index: 1;
+  height: 100%;
+  max-width: 480px; margin: 0 auto;
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.screen { height: 100%; display: flex; flex-direction: column; gap: 12px; }
+.screen > * { animation: rise .55s var(--ease) both; }
+.screen > :nth-child(2) { animation-delay: .07s; }
+.screen > :nth-child(3) { animation-delay: .14s; }
+.screen > :nth-child(4) { animation-delay: .21s; }
+@keyframes rise { from { opacity: .001; transform: translateY(14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding-top: 8px; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 8px; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.scroll--center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; }
+.center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; min-height: 0; }
+.foot { display: flex; flex-direction: column; gap: 10px; padding-block: 12px 18px; }
+.foot__row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------- Typografia ---------- */
+.brand { display: inline-flex; align-items: center; gap: 9px; font: 500 15px/1 var(--f-mono); letter-spacing: .02em; }
+.brand--small { font-size: 13px; color: var(--muted); }
+.brand__mark { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
+.brand__mark i { display: block; width: 3px; border-radius: 2px; background: currentColor; }
+.brand__mark i:nth-child(1) { height: 6px; } .brand__mark i:nth-child(2) { height: 14px; }
+.brand__mark i:nth-child(3) { height: 10px; } .brand__mark i:nth-child(4) { height: 5px; }
+
+.eyebrow { margin: 0; font: 500 11.5px/1.3 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.display {
+  margin: 0; font: 400 clamp(54px, 16vw, 78px)/.92 var(--f-display); letter-spacing: -.02em; text-wrap: balance;
+}
+.display em, .name em { font-style: italic; color: var(--orange); }
+.title { margin: 4px 0 18px; font: 400 44px/1 var(--f-display); letter-spacing: -.01em; }
+.lede { margin: 0; max-width: 34ch; color: var(--muted); font-size: 15px; text-wrap: pretty; }
+.small { margin: 0; font: 400 12.5px/1.4 var(--f-mono); color: var(--muted); letter-spacing: .02em; }
+.label { margin: 0; font: 500 15px/1.3 var(--f-body); }
+.name { margin: 6px 0 10px; font: 400 clamp(56px, 17vw, 84px)/1 var(--f-display); letter-spacing: -.02em; overflow-wrap: anywhere; text-wrap: balance; }
+.name--md { font-size: clamp(46px, 13vw, 64px); margin-bottom: 8px; }
+.word { font: 400 clamp(44px, 13vw, 66px)/1.02 var(--f-display); letter-spacing: -.01em; overflow-wrap: anywhere; text-wrap: balance; }
+.word--md { margin: 2px 0 2px; }
+.impostors { margin: 8px 0 4px; font: italic 400 clamp(46px, 14vw, 70px)/1.02 var(--f-display); color: var(--orange); text-wrap: balance; overflow-wrap: anywhere; }
+.divider { width: 120px; height: 1px; margin: 22px 0; background: linear-gradient(90deg, transparent, var(--line-strong), transparent); }
+
+/* ---------- Úvod ---------- */
+.screen--home { gap: 0; }
+.hero { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-block: 12px; min-height: 0; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.stats div { padding: 12px 0 10px; display: flex; flex-direction: column-reverse; gap: 2px; border-left: 1px solid var(--line); padding-left: 12px; }
+.stats div:first-child { border-left: 0; padding-left: 0; }
+.stats dd { margin: 0; font: 400 30px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.stats dt { font: 400 11px/1.2 var(--f-mono); color: var(--muted); letter-spacing: .04em; }
+.orb-wrap { display: grid; place-items: center; padding-block: 30px 34px; }
+
+/* Žiariace tlačidlo, ako „Try Now“ na predlohe */
+.orb {
+  position: relative; width: 132px; height: 132px; border-radius: 50%; border: 0;
+  background: radial-gradient(circle at 50% 42%, #FFE9DE 0%, #FFB49C 26%, var(--orange) 58%, #C8452A 100%);
+  box-shadow: 0 0 0 1px rgba(255, 220, 205, .5) inset, 0 0 0 10px rgba(252, 115, 77, .12), 0 0 0 22px rgba(252, 115, 77, .06), 0 18px 60px rgba(252, 115, 77, .55);
+  color: #2A0E05; font: 500 13px/1 var(--f-mono); letter-spacing: .18em; text-transform: uppercase;
+  transition: transform .15s ease, box-shadow .3s ease;
+}
+.orb::after { content: ""; position: absolute; inset: -22px; border-radius: 50%; border: 1px solid rgba(252, 115, 77, .35); animation: pulse 2.6s ease-out infinite; }
+.orb:active { transform: scale(.96); }
+@keyframes pulse { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.25); opacity: 0; } }
+
+/* ---------- Tlačidlá a ovládacie prvky ---------- */
+.btn {
+  min-height: 54px; padding: 0 22px; border-radius: 999px; border: 1px solid transparent;
+  font: 500 16px/1 var(--f-body); letter-spacing: .005em; transition: transform .12s ease, background .2s ease, opacity .2s ease;
+}
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn--primary { background: var(--text); color: var(--ink); }
+.btn--primary:disabled { background: rgba(237, 244, 249, .14); color: rgba(237, 244, 249, .45); }
+.btn--ghost { background: rgba(7, 19, 28, .55); border-color: var(--line-strong); color: var(--text); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.btn--sm { min-height: 44px; padding: 0 18px; font-size: 14px; }
+
+.chip, .back {
+  min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong);
+  background: rgba(7, 19, 28, .5); font: 500 12px/1 var(--f-mono); letter-spacing: .06em; color: var(--text);
+}
+.back::before { content: "←"; margin-right: 8px; }
+.back--x::before { content: "×"; font-size: 15px; }
+.back--x.is-armed { border-color: var(--orange); color: var(--orange); }
+.link { border: 0; background: none; padding: 6px 0; font: 500 12px/1 var(--f-mono); color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+
+.hint { margin: 0; min-height: 1.2em; text-align: center; font: 400 12.5px/1.3 var(--f-mono); color: var(--muted); }
+.msg { margin: 8px 2px 0; min-height: 1.2em; font: 400 12.5px/1.3 var(--f-mono); color: var(--orange); }
+
+/* Pravidlá */
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; color: var(--muted); max-width: 40ch; }
+.steps li::marker { font: 500 13px var(--f-mono); color: var(--orange); }
+.steps b { color: var(--text); font-weight: 500; }
+
+/* Hráči */
+.add { display: flex; gap: 8px; }
+.field {
+  flex: 1; min-width: 0; min-height: 54px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: rgba(7, 19, 28, .7); color: var(--text);
+  font: 400 17px/1 var(--f-body);
+}
+.field::placeholder { color: var(--muted); }
+.field:focus { outline: none; border-color: var(--text); }
+.players { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; }
+.players li { display: flex; align-items: center; gap: 14px; min-height: 56px; border-bottom: 1px solid var(--line); }
+.players__n { width: 2ch; font: 400 12px/1 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.players__name { flex: 1; min-width: 0; font: 400 26px/1.1 var(--f-display); overflow-wrap: anywhere; }
+.players__del { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--muted); font-size: 18px; line-height: 1; }
+
+/* Nastavenia */
+.group { padding: 18px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.group__head { display: flex; justify-content: space-between; align-items: center; }
+.row { flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; }
+.cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat {
+  min-height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-strong);
+  background: rgba(7, 19, 28, .55); font: 500 14px/1 var(--f-body); color: var(--muted);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.cat small { font: 400 11px/1 var(--f-mono); opacity: .7; }
+.cat[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--ink); }
+
+.stepper { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 999px; flex-shrink: 0; }
+.stepper__btn { width: 46px; height: 46px; border: 0; background: none; font-size: 22px; line-height: 1; }
+.stepper__btn:disabled { opacity: .3; }
+.stepper__val { width: 2.2ch; text-align: center; font: 400 28px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+
+.switch { width: 58px; height: 34px; flex-shrink: 0; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(7, 19, 28, .6); padding: 3px; display: flex; transition: background .2s ease; }
+.switch span { width: 26px; height: 26px; border-radius: 50%; background: var(--muted); transition: transform .2s ease, background .2s ease; }
+.switch[aria-checked="true"] { background: var(--text); border-color: var(--text); }
+.switch[aria-checked="true"] span { transform: translateX(24px); background: var(--ink); }
+
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px; }
+.seg button { min-height: 42px; border: 0; border-radius: 999px; background: none; font: 500 13px/1 var(--f-mono); color: var(--muted); }
+.seg button[aria-checked="true"] { background: var(--text); color: var(--ink); }
+
+/* ---------- Karta so slovom: otočí sa, kým držíš prst ---------- */
+.card {
+  width: 100%; max-width: 360px; aspect-ratio: 4 / 5; max-height: 100%;
+  border: 0; padding: 0; background: none; border-radius: 28px; perspective: 1400px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.card__inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .42s var(--spring); }
+.card.is-open .card__inner { transform: rotateY(180deg); }
+.card__side {
+  position: absolute; inset: 0; border-radius: 28px; border: 1px solid var(--line-strong); overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden; pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 6px),
+    radial-gradient(80% 60% at 50% 110%, rgba(2, 151, 222, .35), transparent 70%),
+    var(--panel);
+}
+.card__back { transform: rotateY(180deg); border-color: var(--text); visibility: hidden; transition: visibility 0s .2s; }
+.card.is-open .card__back { visibility: visible; transition-delay: 0s; }
+.card.is-impostor .card__back {
+  border-color: var(--orange);
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 6px), radial-gradient(80% 60% at 50% 110%, rgba(252, 115, 77, .5), transparent 70%), var(--panel);
+}
+.card__front { animation: idle 3.2s ease-in-out infinite; }
+@keyframes idle { 50% { box-shadow: 0 0 0 1px rgba(252,115,77,.25), 0 0 40px rgba(2,151,222,.18); } }
+.card__cta { font: 400 34px/1 var(--f-display); }
+.card .word { color: var(--text); }
+.card.is-impostor .word { font-style: italic; color: var(--orange); text-shadow: 0 0 28px rgba(252,115,77,.45); }
+.pill { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); font: 500 11.5px/1 var(--f-mono); letter-spacing: .06em; color: var(--muted); }
+.clue { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 250px; margin-top: 4px; padding: 14px 16px; border-radius: 18px; background: rgba(252, 115, 77, .1); border: 1px solid rgba(252, 115, 77, .35); }
+.clue .eyebrow { color: var(--orange); }
+.clue__word { font: 400 32px/1.05 var(--f-display); color: var(--text); overflow-wrap: anywhere; }
+.print { width: 86px; height: 86px; border-radius: 50%; border: 1px solid var(--line-strong); position: relative; }
+.print::before, .print::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid var(--line-strong); }
+.print::before { inset: 14px; animation: ring 2.4s ease-out infinite; }
+.print::after { inset: 30px; background: var(--orange-soft); border-color: rgba(252,115,77,.6); animation: ring 2.4s ease-out .4s infinite; }
+@keyframes ring { 0% { transform: scale(.9); } 50% { transform: scale(1.06); } 100% { transform: scale(.9); } }
+
+/* ---------- Časovač ---------- */
+.timer { position: relative; width: min(64vw, 220px); aspect-ratio: 1; margin: 22px 0 14px; }
+.timer__ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer__track { fill: none; stroke: var(--line); stroke-width: 6; }
+.timer__bar { fill: none; stroke: var(--orange); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 552.9; stroke-dashoffset: 0; transition: stroke-dashoffset .3s linear; }
+.timer__inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.timer__time { font: 400 64px/1 var(--f-display); }
+.timer.is-done .timer__time { color: var(--orange); }
+.timer-ctrl { display: flex; gap: 10px; }
+.timer[hidden], .timer-ctrl[hidden] { display: none; }
+
+
+/* ---------- Nové prvky ---------- */
+.subtitle { margin: 28px 0 10px; font: 400 30px/1 var(--f-display); }
+.modes { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.modes div { padding: 12px 0; border-top: 1px solid var(--line); }
+.modes dt { font: 500 13px/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--orange); }
+.modes dd { margin: 4px 0 0; color: var(--muted); }
+.count { margin-left: 6px; font: 400 11.5px/1 var(--f-mono); color: var(--muted); letter-spacing: .02em; }
+.seg--3 { grid-template-columns: repeat(3, 1fr); }
+.row.is-off { opacity: .4; }
+.link--center { align-self: center; font-size: 12.5px; }
+
+/* ---------- Animácie ---------- */
+/* Nadpis: slová naskočia z rozmazania, „impostor“ sa trbliece */
+.display .w { display: inline-block; animation: word .8s var(--ease) both; animation-delay: calc(.12s + var(--d) * .08s); }
+@keyframes word { from { opacity: .001; transform: translateY(.35em) rotate(2deg); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+.display .w--sus {
+  background: linear-gradient(100deg, var(--orange) 0%, var(--orange) 40%, #FFE9DE 50%, var(--orange) 60%, var(--orange) 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: word .8s var(--ease) both, shimmer 4.5s ease-in-out 1.4s infinite;
+  animation-delay: calc(.12s + var(--d) * .08s), 1.4s;
+  padding-right: .06em;
+}
+@keyframes shimmer { 0%, 55% { background-position: 100% 0; } 85%, 100% { background-position: 0% 0; } }
+.stats div { animation: rise .6s var(--ease) both; }
+.stats div:nth-child(1) { animation-delay: .5s; } .stats div:nth-child(2) { animation-delay: .58s; }
+.stats div:nth-child(3) { animation-delay: .66s; } .stats div:nth-child(4) { animation-delay: .74s; }
+.orb { animation: orb-in .9s var(--spring) .7s both, float 5s ease-in-out 1.6s infinite; }
+@keyframes orb-in { from { opacity: .001; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes float { 50% { transform: translateY(-6px); } }
+.orb:active { animation: none; transform: scale(.94); }
+
+/* Písmená mena */
+.ch { display: inline-block; animation: letter .6s var(--ease) both; animation-delay: calc(.1s + var(--i) * .045s); }
+@keyframes letter { from { opacity: .001; transform: translateY(.4em) scale(.9); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+
+/* Hráči */
+.players li.is-new { animation: slide-in .5s var(--spring) both; }
+.players li.is-new .players__name { animation: glow-text 1.2s ease both; }
+@keyframes slide-in { from { opacity: .001; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes glow-text { 0% { color: var(--orange); } 100% { color: var(--text); } }
+.players li.is-leaving { animation: leave .22s ease forwards; overflow: hidden; }
+@keyframes leave { to { opacity: 0; transform: translateX(40px); min-height: 0; height: 0; } }
+.shake { animation: shake .4s ease; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+/* Nastavenia */
+.cat { animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * .025s); transition: background .2s ease, color .2s ease, border-color .2s ease; }
+.cat.pop { animation: pop .35s var(--spring); }
+@keyframes pop { 40% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.stepper__val.bump { animation: bump .35s var(--spring); }
+@keyframes bump { 40% { transform: scale(1.35); color: var(--orange); } }
+.switch span { transition: transform .3s var(--spring), background .2s ease; }
+.seg button { transition: background .25s ease, color .25s ease; }
+.fade-swap { animation: fade-swap .35s ease; }
+@keyframes fade-swap { from { opacity: 0; transform: translateY(4px); } }
+
+/* Tlačidlo „Hotovo“ sa ozve, keď sa odomkne */
+.btn.ready { animation: ready .5s var(--spring); }
+@keyframes ready { 40% { transform: scale(1.04); box-shadow: 0 0 0 6px rgba(237,244,249,.12); } }
+
+/* Ruleta začínajúceho hráča */
+.roulette { min-height: 1.1em; }
+.roulette.spin { animation: spin .12s ease-out; }
+@keyframes spin { from { opacity: .3; transform: translateY(-.25em); filter: blur(3px); } }
+.roulette.is-landed { animation: land .6s var(--spring); color: var(--text); }
+.roulette.is-landed::after { content: ""; display: block; height: 2px; margin: 6px auto 0; width: 60%; border-radius: 2px; background: var(--orange); box-shadow: 0 0 16px var(--orange); animation: underline .6s var(--ease) .1s both; }
+@keyframes land { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes underline { from { transform: scaleX(0); } }
+
+/* Časovač: posledných 10 sekúnd pulzuje */
+.timer.is-urgent .timer__ring { animation: urgent 1s ease-in-out infinite; }
+@keyframes urgent { 50% { filter: drop-shadow(0 0 12px var(--orange)); } }
+.timer__time.tick { animation: tick .4s var(--spring); }
+@keyframes tick { 30% { transform: scale(1.15); color: var(--orange); } }
+
+/* Odhalenie: odpočet a postupný nábeh */
+.reveal { position: relative; }
+.countdown { position: absolute; inset: 0; display: none; place-items: center; cursor: pointer; z-index: 2; }
+.countdown span { font: italic 400 clamp(120px, 40vw, 180px)/1 var(--f-display); color: var(--orange); text-shadow: 0 0 60px rgba(252,115,77,.6); }
+.countdown span.zoom { animation: zoom .6s var(--ease) both; }
+@keyframes zoom { from { opacity: 0; transform: scale(1.8); filter: blur(12px); } 40% { opacity: 1; transform: scale(1); filter: none; } to { opacity: 0; transform: scale(.7); } }
+[data-screen=reveal].is-counting .countdown { display: grid; }
+[data-screen=reveal].is-counting .reveal__body, [data-screen=reveal].is-counting .r5 { visibility: hidden; }
+.reveal__body { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+[data-screen=reveal].is-shown .r1 { animation: rise .5s var(--ease) both; }
+[data-screen=reveal].is-shown .r2 { animation: slam .7s var(--spring) .12s both; }
+[data-screen=reveal].is-shown .r3 { animation: rise .5s var(--ease) .55s both; }
+[data-screen=reveal].is-shown .r4 { animation: rise .6s var(--ease) .7s both; }
+[data-screen=reveal].is-shown .r5 { animation: rise .5s var(--ease) .95s both; }
+@keyframes slam { from { opacity: 0; transform: scale(1.6); filter: blur(14px); } to { opacity: 1; transform: none; filter: none; } }
+.impostors { text-shadow: 0 0 40px rgba(252,115,77,.35); }
+.burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+
+@media (max-height: 640px) {
+  .display { font-size: clamp(46px, 13vw, 60px); }
+  .orb { width: 108px; height: 108px; }
+  .orb-wrap { padding-block: 22px 24px; }
+  .timer { width: min(50vw, 170px); margin: 12px 0 8px; }
+  .timer__time { font-size: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

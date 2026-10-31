@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Impostor</title>
+  <meta name="description" content="Spoločenská hra na jednom mobile. Funguje aj offline.">
+  <meta name="theme-color" content="#02070A">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Impostor">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--BODY-START-->
+<div class="glow" aria-hidden="true"><div class="glow__beam"></div><div class="glow__ribs"></div></div>
+<canvas class="burst" id="burst" aria-hidden="true"></canvas>
+
+<main class="app">
+
+  <!-- 1. Úvod -->
+  <section class="screen screen--home" data-screen="home">
+    <header class="bar">
+      <span class="brand"><span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Impostor</span>
+      <button class="chip" type="button" data-go="rules">Pravidlá</button>
+    </header>
+
+    <div class="hero">
+      <p class="eyebrow">Hra na jednom mobile</p>
+      <h1 class="display" aria-label="Kto z vás je impostor?">
+        <span class="w" style="--d:0">Kto</span> <span class="w" style="--d:1">z</span> <span class="w" style="--d:2">vás</span><br>
+        <span class="w" style="--d:3">je</span> <em class="w w--sus" style="--d:4">impostor</em><span class="w" style="--d:5">?</span>
+      </h1>
+      <p class="lede">Všetci poznajú tajné slovo. Jeden nie, a musí blafovať tak dobre, aby ho nikto neodhalil.</p>
+    </div>
+
+    <dl class="stats">
+      <div><dt>hráčov</dt><dd>3–20</dd></div>
+      <div><dt>kategórií</dt><dd id="stat-cats">17</dd></div>
+      <div><dt>slov</dt><dd id="stat-words">688</dd></div>
+      <div><dt>internetu</dt><dd>0</dd></div>
+    </dl>
+
+    <div class="orb-wrap">
+      <button class="orb" type="button" id="btn-play"><span>Hrať</span></button>
+    </div>
+  </section>
+
+  <!-- Pravidlá -->
+  <section class="screen" data-screen="rules" hidden>
+    <header class="bar">
+      <button class="back" type="button" data-back>Späť</button>
+      <span class="eyebrow">Pravidlá</span>
+    </header>
+    <div class="scroll">
+      <h2 class="title">Ako sa hrá</h2>
+      <ol class="steps">
+        <li><b>Rozdanie.</b> Mobil koluje dookola. Každý si potajomky pozrie svoje slovo. Impostor namiesto slova uvidí IMPOSTOR, kategóriu a jedno slovo ako nápovedu, aby vedel zapadnúť.</li>
+        <li><b>Nápovede.</b> Kto začína, ukáže hra. Postupne každý povie jedno slovo, ktoré súvisí s tajným slovom.</li>
+        <li><b>Pozor na mieru.</b> Príliš jasná nápoveda prezradí slovo impostorovi. Príliš vágna ťa spraví podozrivým.</li>
+        <li><b>Diskusia a hlasovanie.</b> Debatujte, potom naraz ukážte prstom na toho, koho podozrievate. Ak ste si nie istí, dajte ďalšie kolo nápovedí.</li>
+        <li><b>Odhalenie.</b> Civilisti vyhrávajú, ak chytili impostora. Impostor vyhráva, ak ho nechytili, alebo ak uhádne tajné slovo.</li>
+      </ol>
+      <h3 class="subtitle">Režimy</h3>
+      <dl class="modes">
+        <div><dt>Klasika</dt><dd>Impostor vie, že je impostor, a dostane nápovedu.</dd></div>
+        <div><dt>Undercover</dt><dd>Impostor dostane podobné slovo z tej istej kategórie a nevie, že je impostor.</dd></div>
+        <div><dt>Chaos</dt><dd>Počet impostorov je náhodný. Môžu byť dvaja, jeden, alebo aj nikto.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- 2. Hráči -->
+  <section class="screen" data-screen="players" hidden>
+    <header class="bar">
+      <button class="back" type="button" data-back>Späť</button>
+      <span class="eyebrow">Krok 1 z 2</span>
+    </header>
+    <div class="scroll">
+      <h2 class="title">Kto hrá?</h2>
+      <form class="add" id="form-add" autocomplete="off">
+        <label class="sr" for="input-name">Meno hráča</label>
+        <input id="input-name" class="field" type="text" maxlength="16" placeholder="Meno hráča" enterkeyhint="done">
+        <button class="btn btn--ghost" type="submit">Pridať</button>
+      </form>
+      <p class="msg" id="msg-players" role="status"></p>
+      <ul class="players" id="list-players"></ul>
+    </div>
+    <footer class="foot">
+      <p class="hint" id="hint-players"></p>
+      <button class="btn btn--primary" type="button" id="btn-to-settings">Ďalej</button>
+    </footer>
+  </section>
+
+  <!-- 3. Nastavenia -->
+  <section class="screen" data-screen="settings" hidden>
+    <header class="bar">
+      <button class="back" type="button" data-back>Späť</button>
+      <span class="eyebrow">Krok 2 z 2</span>
+    </header>
+    <div class="scroll">
+      <h2 class="title">Nastavenia</h2>
+
+      <div class="group">
+        <h3 class="label">Režim</h3>
+        <div class="seg seg--3" id="seg-mode" role="radiogroup" aria-label="Režim hry">
+          <button type="button" role="radio" data-mode="klasika">Klasika</button>
+          <button type="button" role="radio" data-mode="undercover">Undercover</button>
+          <button type="button" role="radio" data-mode="chaos">Chaos</button>
+        </div>
+        <p class="small" id="mode-note"></p>
+      </div>
+
+      <div class="group">
+        <div class="group__head"><h3 class="label">Kategórie <span class="count" id="cats-count"></span></h3><button class="link" type="button" id="btn-all-cats">Vybrať všetky</button></div>
+        <div class="cats" id="list-cats"></div>
+      </div>
+
+      <div class="group row" id="row-imp">
+        <div><h3 class="label">Počet impostorov</h3><p class="small" id="imp-note"></p></div>
+        <div class="stepper">
+          <button class="stepper__btn" type="button" id="btn-imp-minus" aria-label="Menej impostorov">−</button>
+          <output class="stepper__val" id="imp-count">1</output>
+          <button class="stepper__btn" type="button" id="btn-imp-plus" aria-label="Viac impostorov">+</button>
+        </div>
+      </div>
+
+      <div class="group row" id="row-showcat">
+        <div><h3 class="label" id="lbl-showcat">Ukázať impostorovi kategóriu</h3><p class="small">Vie, o akú oblasť ide</p></div>
+        <button class="switch" type="button" role="switch" id="sw-showcat" aria-labelledby="lbl-showcat" aria-checked="true"><span></span></button>
+      </div>
+
+      <div class="group row" id="row-hint">
+        <div><h3 class="label" id="lbl-hint">Nápoveda pre impostora</h3><p class="small">Jedno slovo, ktorým môže zapadnúť</p></div>
+        <button class="switch" type="button" role="switch" id="sw-hint" aria-labelledby="lbl-hint" aria-checked="true"><span></span></button>
+      </div>
+
+      <div class="group row" id="row-know">
+        <div><h3 class="label" id="lbl-know">Impostori sa poznajú</h3><p class="small">Pri viacerých impostoroch vidia, kto je s nimi</p></div>
+        <button class="switch" type="button" role="switch" id="sw-know" aria-labelledby="lbl-know" aria-checked="false"><span></span></button>
+      </div>
+
+      <div class="group">
+        <h3 class="label">Časovač diskusie</h3>
+        <div class="seg" id="seg-timer" role="radiogroup" aria-label="Časovač diskusie">
+          <button type="button" role="radio" data-t="0">Vyp.</button>
+          <button type="button" role="radio" data-t="60">1 min</button>
+          <button type="button" role="radio" data-t="120">2 min</button>
+          <button type="button" role="radio" data-t="180">3 min</button>
+        </div>
+      </div>
+    </div>
+    <footer class="foot">
+      <p class="hint" id="hint-settings"></p>
+      <button class="btn btn--primary" type="button" id="btn-start">Rozdať roly</button>
+    </footer>
+  </section>
+
+  <!-- 4a. Podaj mobil -->
+  <section class="screen" data-screen="pass" hidden>
+    <header class="bar">
+      <button class="back back--x" type="button" id="btn-cancel">Zrušiť kolo</button>
+      <span class="eyebrow tabular" id="pass-progress">01 / 05</span>
+    </header>
+    <div class="center">
+      <p class="eyebrow">Podaj mobil hráčovi</p>
+      <p class="name" id="pass-name" aria-live="polite">Meno</p>
+      <p class="lede">Ostatní sa nepozerajú.</p>
+    </div>
+    <footer class="foot">
+      <button class="btn btn--primary" type="button" id="btn-iam">Som Meno</button>
+    </footer>
+  </section>
+
+  <!-- 4b. Pozri si rolu -->
+  <section class="screen" data-screen="peek" hidden>
+    <header class="bar">
+      <span class="eyebrow" id="peek-who">Meno</span>
+      <span class="eyebrow tabular" id="peek-progress">01 / 05</span>
+    </header>
+    <div class="center">
+      <button class="card" type="button" id="card" aria-describedby="card-help">
+        <span class="card__inner">
+          <span class="card__side card__front" id="card-rest">
+            <span class="print" aria-hidden="true"></span>
+            <span class="card__cta">Podrž prst</span>
+            <span class="small" id="card-help">Slovo uvidíš, kým držíš</span>
+          </span>
+          <span class="card__side card__back" id="card-face">
+            <span class="eyebrow" id="face-label">Tvoje slovo</span>
+            <span class="word" id="face-word">slovo</span>
+            <span class="pill" id="face-cat">Kategória</span>
+            <span class="clue" id="face-clue">
+              <span class="eyebrow">Tvoja nápoveda</span>
+              <span class="clue__word" id="face-hint">nápoveda</span>
+            </span>
+            <span class="small" id="face-sub"></span>
+          </span>
+        </span>
+      </button>
+    </div>
+    <footer class="foot">
+      <p class="hint" id="hint-peek">Najprv si pozri svoje slovo</p>
+      <button class="btn btn--primary" type="button" id="btn-next" disabled>Hotovo, podaj ďalej</button>
+    </footer>
+  </section>
+
+  <!-- 5. Kolo -->
+  <section class="screen" data-screen="round" hidden>
+    <header class="bar">
+      <span class="brand brand--small"><span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Impostor</span>
+      <span class="eyebrow tabular" id="round-label">Kolo nápovedí 1</span>
+    </header>
+    <div class="scroll scroll--center">
+      <p class="eyebrow">Začína</p>
+      <p class="name name--md roulette" id="round-starter" aria-live="polite">Meno</p>
+      <p class="lede">Po smere hodinových ručičiek každý povie jedno slovo. Potom debata a hlasovanie.</p>
+
+      <div class="timer" id="timer">
+        <svg class="timer__ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="timer__track" cx="100" cy="100" r="88"></circle>
+          <circle class="timer__bar" id="timer-bar" cx="100" cy="100" r="88"></circle>
+        </svg>
+        <div class="timer__inner">
+          <span class="timer__time tabular" id="timer-time">2:00</span>
+          <span class="small" id="timer-state">Diskusia</span>
+        </div>
+      </div>
+      <div class="timer-ctrl" id="timer-ctrl">
+        <button class="btn btn--ghost btn--sm" type="button" id="btn-timer">Spustiť</button>
+        <button class="btn btn--ghost btn--sm" type="button" id="btn-timer-reset">Od začiatku</button>
+      </div>
+    </div>
+    <footer class="foot">
+      <button class="link link--center" type="button" id="btn-more">Nechytili ste ho? Ďalšie kolo nápovedí</button>
+      <button class="btn btn--primary" type="button" id="btn-reveal">Odhaliť impostora</button>
+    </footer>
+  </section>
+
+  <!-- 6. Odhalenie -->
+  <section class="screen" data-screen="reveal" hidden>
+    <header class="bar">
+      <span class="brand brand--small"><span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Impostor</span>
+      <span class="eyebrow">Odhalenie</span>
+    </header>
+    <div class="scroll scroll--center reveal">
+      <div class="countdown" id="countdown" aria-hidden="true"><span id="countdown-n">3</span></div>
+      <div class="reveal__body" id="rev-body">
+        <p class="eyebrow r1" id="rev-label">Impostor bol</p>
+        <p class="impostors r2" id="rev-names">Meno</p>
+        <p class="small r2" id="rev-their"></p>
+        <div class="divider r3" aria-hidden="true"></div>
+        <p class="eyebrow r3">Tajné slovo</p>
+        <p class="word word--md r4" id="rev-word">slovo</p>
+        <p class="small r4" id="rev-cat">Kategória</p>
+      </div>
+    </div>
+    <footer class="foot foot--stack r5">
+      <button class="btn btn--primary" type="button" id="btn-again">Nové kolo</button>
+      <div class="foot__row">
+        <button class="btn btn--ghost" type="button" id="btn-change-settings">Nastavenia</button>
+        <button class="btn btn--ghost" type="button" id="btn-change-players">Hráči</button>
+      </div>
+    </footer>
+  </section>
+
+</main>
+<!--BODY-END-->
+<script src="words.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
